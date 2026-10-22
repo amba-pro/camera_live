@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 330" role="img" aria-labelledby="title"><title>Jim Raynor — original fan-inspired portrait</title>
+<defs>
+<linearGradient id="bg" x2=".8" y2="1"><stop stop-color="#1b4865"/><stop offset="1" stop-color="#071424"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#7bdaff" stop-opacity=".34"/><stop offset="1" stop-color="#7bdaff" stop-opacity="0"/></radialGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dae5ef"/><stop offset=".38" stop-color="#5c7888"/><stop offset="1" stop-color="#142437"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#334960"/><stop offset="1" stop-color="#080e1b"/></linearGradient>
+</defs>
+<rect width="300" height="330" fill="url(#bg)"/>
+<circle cx="151" cy="130" r="166" fill="url(#aura)"/>
+<g opacity=".25" fill="none" stroke="#7bdaff" stroke-width="1">
+<path d="M12 50H88L106 32H280M-12 266H77L93 280H312M50 -10V100L18 132V241M262 -20V97L285 120V280"/>
+<circle cx="150" cy="151" r="102" stroke-dasharray="3 15"/><circle cx="150" cy="151" r="142"/>
+</g>
+<g opacity=".45" fill="#7bdaff"><circle cx="55" cy="41" r="1.5"/><circle cx="252" cy="210" r="2"/><circle cx="273" cy="74" r="1.5"/></g>
+
+<!-- Broad armored shoulders and chestplate -->
+<path d="M17 326L26 245Q34 217 73 214L95 184H212L232 216Q267 217 277 256L289 326Z" fill="#162c42" stroke="#7bb7c8" stroke-width="5"/>
+<path d="M8 310L21 254Q25 228 80 213L93 278L72 329H11Z" fill="url(#steel)" stroke="#66aec8" stroke-width="4"/>
+<path d="M291 312L280 254Q270 226 221 213L212 280L231 329H290Z" fill="url(#steel)" stroke="#66aec8" stroke-width="4"/>
+<path d="M85 231L150 266L215 231L204 328H96Z" fill="#152838" stroke="#6d99af" stroke-width="5"/>
+<path d="M119 291H181L190 328H110Z" fill="#3d657d" stroke="#92dae7" stroke-width="4"/>
+<rect x="132" y="302" width="36" height="10" fill="#87eafb" opacity=".85"/>
+<!-- Heavy marine helm -->
+<path d="M86 114Q90 63 150 55Q211 65 217 118L209 204L187 232H113L91 201Z" fill="#294a60" stroke="#86c0db" stroke-width="6"/>
+<path d="M87 127L70 130L72 180L92 197M212 128L230 132L229 184L208 200" fill="#4c7a95" stroke="#abd8e9" stroke-width="5"/>
+<path d="M104 100Q153 63 194 100L206 132L94 132Z" fill="#698ca3" stroke="#c1dfec" stroke-width="5"/>
+<path d="M100 133H204L195 177L166 193H133L106 177Z" fill="#081d2f" stroke="#65d2ee" stroke-width="4"/>
+<path d="M111 147Q155 165 191 147" stroke="#90efff" stroke-width="9" opacity=".9" fill="none"/>
+<path d="M113 184L136 199H165L188 184L178 217H122Z" fill="#485e6b" stroke="#99bccc" stroke-width="4"/>
+<path d="M138 205H163" stroke="#a4ebf4" stroke-width="3"/>
+<path d="M64 261L82 265M220 264L237 259" stroke="#9ae7fa" stroke-width="8" opacity=".8"/>
+
+<rect x="7" y="7" width="286" height="316" rx="2" fill="none" stroke="#7bdaff" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M8 39V8h31M261 8h31v31M8 291v31h31M261 322h31v-31" stroke="#7bdaff" stroke-width="3" opacity=".62" fill="none"/>
+</svg>

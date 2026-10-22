@@ -14,9 +14,11 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import cv2
+
+from chat import ChatError, ChatStore
 
 
 ROOT = Path(__file__).resolve().parent
@@ -565,6 +567,14 @@ class LiveHandler(BaseHTTPRequestHandler):
     def camera(self) -> CameraWorker:
         return self.server.camera  # type: ignore[attr-defined]
 
+    @property
+    def chat(self) -> ChatStore:
+        return self.server.chat  # type: ignore[attr-defined]
+
+    def _json(self, status: int, payload: dict) -> None:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self._respond(status, "application/json; charset=utf-8", body)
+
     def _respond(self, status: int, content_type: str, body: bytes) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -585,6 +595,22 @@ class LiveHandler(BaseHTTPRequestHandler):
         elif path == "/app.js":
             self._respond(200, "text/javascript; charset=utf-8",
                           (WEB / "app.js").read_bytes())
+        elif path in (
+            "/art/raynor.svg", "/art/kerrigan.svg",
+            "/art/zeratul.svg", "/art/artanis.svg",
+        ):
+            art_name = path.rsplit("/", 1)[1]
+            self._respond(200, "image/svg+xml; charset=utf-8",
+                          (WEB / "art" / art_name).read_bytes())
+        elif path == "/api/chat":
+            try:
+                values = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                cursors = values.get("after", ["0"])
+                if len(cursors) != 1 or not cursors[0].isdigit():
+                    raise ChatError("Неверный параметр after.")
+                self._json(200, self.chat.history(int(cursors[0])))
+            except ChatError as exc:
+                self._json(exc.status, {"error": str(exc)})
         elif path == "/api/status":
             payload = self.camera.status()
             host, port = self.server.server_address[:2]
@@ -604,6 +630,40 @@ class LiveHandler(BaseHTTPRequestHandler):
             self._stream()
         else:
             self._respond(404, "text/plain; charset=utf-8", b"Not found")
+
+    def do_POST(self) -> None:
+        if urlsplit(self.path).path != "/api/chat":
+            self._json(404, {"error": "Not found"})
+            return
+        origin = self.headers.get("Origin")
+        if origin and urlsplit(origin).netloc.lower() != self.headers.get("Host", "").lower():
+            self._json(403, {"error": "Недопустимый Origin."})
+            return
+        content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if content_type != "application/json":
+            self._json(415, {"error": "Используйте application/json."})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0:
+            self._json(400, {"error": "Пустой или неверный JSON."})
+            return
+        if length > 4096:
+            self._json(413, {"error": "Сообщение слишком большое."})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length))
+        except (ValueError, UnicodeDecodeError):
+            self._json(400, {"error": "Неверный JSON."})
+            return
+        try:
+            record = self.chat.post(payload, self.client_address[0])
+        except ChatError as exc:
+            self._json(exc.status, {"error": str(exc)})
+        else:
+            self._json(201, {"message": record})
 
     def _stream(self) -> None:
         self.send_response(200)
@@ -716,6 +776,7 @@ def main() -> None:
     server = ThreadingHTTPServer((args.host, args.port), LiveHandler)
     server.daemon_threads = True
     server.camera = camera  # type: ignore[attr-defined]
+    server.chat = ChatStore()  # type: ignore[attr-defined]
     camera.start()
     print(f"Camera Live: http://127.0.0.1:{args.port}")
     if args.host not in ("127.0.0.1", "localhost", "::1"):

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 330" role="img" aria-labelledby="title"><title>Zeratul — original fan-inspired portrait</title>
+<defs>
+<linearGradient id="bg" x2=".8" y2="1"><stop stop-color="#29244f"/><stop offset="1" stop-color="#080d21"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#b896ff" stop-opacity=".34"/><stop offset="1" stop-color="#b896ff" stop-opacity="0"/></radialGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dae5ef"/><stop offset=".38" stop-color="#5c7888"/><stop offset="1" stop-color="#142437"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#334960"/><stop offset="1" stop-color="#080e1b"/></linearGradient>
+</defs>
+<rect width="300" height="330" fill="url(#bg)"/>
+<circle cx="151" cy="130" r="166" fill="url(#aura)"/>
+<g opacity=".25" fill="none" stroke="#b896ff" stroke-width="1">
+<path d="M12 50H88L106 32H280M-12 266H77L93 280H312M50 -10V100L18 132V241M262 -20V97L285 120V280"/>
+<circle cx="150" cy="151" r="102" stroke-dasharray="3 15"/><circle cx="150" cy="151" r="142"/>
+</g>
+<g opacity=".45" fill="#b896ff"><circle cx="55" cy="41" r="1.5"/><circle cx="252" cy="210" r="2"/><circle cx="273" cy="74" r="1.5"/></g>
+
+<!-- Cloaked protoss templar -->
+<path d="M29 327Q38 213 109 192L150 227L195 190Q264 216 278 327Z" fill="#151a38" stroke="#8b72d1" stroke-width="5"/>
+<path d="M27 319L66 210L109 195L111 326ZM273 319L234 210L192 194L190 327Z" fill="#242043" stroke="#b18dec" stroke-width="4"/>
+<path d="M68 236L99 261L87 323M229 236L201 265L212 322" stroke="#bc8ff1" stroke-width="9" fill="none" opacity=".76"/>
+<path d="M88 88Q150 18 212 88L226 183L191 219L149 253L103 216L75 175Z" fill="#1d2240" stroke="#8a82d9" stroke-width="5"/>
+<path d="M101 93Q121 47 151 48Q187 48 200 91L204 168L172 217L150 236L128 215L98 168Z" fill="#48516d" stroke="#a09cda" stroke-width="3"/>
+<path d="M94 138Q120 129 139 145L130 159L102 153ZM207 138Q181 128 160 145L171 159L201 153Z" fill="#d7aeff" stroke="#b66bf9" stroke-width="5"/>
+<path d="M137 168L147 187L155 187L166 168M133 204L150 215L169 202" stroke="#16192f" stroke-width="5" fill="none"/>
+<path d="M100 171Q75 206 66 261M202 172Q225 207 237 261" stroke="#6267a0" stroke-width="17" fill="none"/>
+<!-- Psi blade aura -->
+<path d="M229 315Q248 244 271 141Q277 120 260 108Q267 139 246 170L220 315Z" fill="#a6a2ff" opacity=".52" stroke="#c7b4ff" stroke-width="5"/>
+<path d="M235 296L261 157" stroke="#e6dfff" stroke-width="5"/>
+<path d="M62 121L75 90L99 70M239 100L217 72L203 66" stroke="#ba9bff" opacity=".7" stroke-width="3" fill="none"/>
+
+<rect x="7" y="7" width="286" height="316" rx="2" fill="none" stroke="#b896ff" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M8 39V8h31M261 8h31v31M8 291v31h31M261 322h31v-31" stroke="#b896ff" stroke-width="3" opacity=".62" fill="none"/>
+</svg>
