@@ -28,6 +28,7 @@
       <div class="player">
         <img id="stream" src="/stream.mjpg" alt="Трансляция с USB-камеры">
         <div id="overlay" class="overlay"><div class="loader"></div><span id="overlay-label">Ожидание кадра камеры…</span></div>
+        <div id="notice" class="frame-notice hidden"></div>
         <span class="live-label"><span class="live-dot"></span> LIVE</span>
       </div>
       <div class="toolbar">
@@ -46,6 +47,7 @@
     </section>
 
     <div class="note" id="message" role="status">Подключаемся к камере…</div>
+    <p id="lan" class="lan" hidden></p>
     <footer>camera_live · Virtual Inspection Lab · MJPEG over HTTP</footer>
   </main>
 </body>
