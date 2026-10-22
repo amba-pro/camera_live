@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 330" role="img" aria-labelledby="title"><title>Artanis — original fan-inspired portrait</title>
+<defs>
+<linearGradient id="bg" x2=".8" y2="1"><stop stop-color="#665032"/><stop offset="1" stop-color="#142139"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#ffe0a0" stop-opacity=".34"/><stop offset="1" stop-color="#ffe0a0" stop-opacity="0"/></radialGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dae5ef"/><stop offset=".38" stop-color="#5c7888"/><stop offset="1" stop-color="#142437"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#334960"/><stop offset="1" stop-color="#080e1b"/></linearGradient>
+</defs>
+<rect width="300" height="330" fill="url(#bg)"/>
+<circle cx="151" cy="130" r="166" fill="url(#aura)"/>
+<g opacity=".25" fill="none" stroke="#ffe0a0" stroke-width="1">
+<path d="M12 50H88L106 32H280M-12 266H77L93 280H312M50 -10V100L18 132V241M262 -20V97L285 120V280"/>
+<circle cx="150" cy="151" r="102" stroke-dasharray="3 15"/><circle cx="150" cy="151" r="142"/>
+</g>
+<g opacity=".45" fill="#ffe0a0"><circle cx="55" cy="41" r="1.5"/><circle cx="252" cy="210" r="2"/><circle cx="273" cy="74" r="1.5"/></g>
+
+<!-- High templar ceremonial armor -->
+<path d="M15 329L34 242L96 201L150 227L205 199L266 240L289 329Z" fill="#3f4253" stroke="#d6b476" stroke-width="5"/>
+<path d="M20 293L66 215L110 222L101 329H29Z" fill="url(#steel)" stroke="#e3bd76" stroke-width="6"/>
+<path d="M278 293L234 215L192 223L201 329H271Z" fill="url(#steel)" stroke="#e3bd76" stroke-width="6"/>
+<path d="M110 234L150 266L190 234L182 329H119Z" fill="#7e663f" stroke="#ffe09c" stroke-width="5"/>
+<path d="M135 278H167L170 328H132Z" fill="#2c5066" stroke="#92e8f7" stroke-width="4"/>
+<!-- Golden protoss headdress -->
+<path d="M100 92L109 42L138 64L151 15L167 65L196 41L209 96L207 181L181 219L150 245L119 218L93 180Z" fill="#9b854e" stroke="#ffe2a1" stroke-width="6"/>
+<path d="M114 101L129 72L151 85L173 72L188 101L195 172L174 211L151 231L127 208L106 169Z" fill="#536a70" stroke="#cfcead" stroke-width="4"/>
+<path d="M114 134Q133 121 144 140L134 156L116 149ZM188 134Q171 122 157 140L169 156L187 149Z" fill="#91f2ff" stroke="#b7f8ff" stroke-width="6"/>
+<path d="M149 161L144 183L157 183M132 199L151 213L167 198" stroke="#27465a" stroke-width="4" fill="none"/>
+<path d="M104 110L80 160L102 209M199 110L220 162L199 209" stroke="#d6b16a" stroke-width="14" fill="none"/>
+<path d="M72 247L93 257M226 257L245 247" stroke="#ffe9b5" stroke-width="8"/>
+<path d="M150 36L150 73" stroke="#b4fcff" stroke-width="8" opacity=".9"/>
+
+<rect x="7" y="7" width="286" height="316" rx="2" fill="none" stroke="#ffe0a0" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M8 39V8h31M261 8h31v31M8 291v31h31M261 322h31v-31" stroke="#ffe0a0" stroke-width="3" opacity=".62" fill="none"/>
+</svg>
