@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 330" role="img" aria-labelledby="title"><title>Sarah Kerrigan — original fan-inspired portrait</title>
+<defs>
+<linearGradient id="bg" x2=".8" y2="1"><stop stop-color="#43223f"/><stop offset="1" stop-color="#110c20"/></linearGradient>
+<radialGradient id="aura"><stop stop-color="#fb76bb" stop-opacity=".34"/><stop offset="1" stop-color="#fb76bb" stop-opacity="0"/></radialGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dae5ef"/><stop offset=".38" stop-color="#5c7888"/><stop offset="1" stop-color="#142437"/></linearGradient>
+<linearGradient id="shade" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#334960"/><stop offset="1" stop-color="#080e1b"/></linearGradient>
+</defs>
+<rect width="300" height="330" fill="url(#bg)"/>
+<circle cx="151" cy="130" r="166" fill="url(#aura)"/>
+<g opacity=".25" fill="none" stroke="#fb76bb" stroke-width="1">
+<path d="M12 50H88L106 32H280M-12 266H77L93 280H312M50 -10V100L18 132V241M262 -20V97L285 120V280"/>
+<circle cx="150" cy="151" r="102" stroke-dasharray="3 15"/><circle cx="150" cy="151" r="142"/>
+</g>
+<g opacity=".45" fill="#fb76bb"><circle cx="55" cy="41" r="1.5"/><circle cx="252" cy="210" r="2"/><circle cx="273" cy="74" r="1.5"/></g>
+
+<!-- Zerg chitin wings and spines -->
+<path d="M132 131Q76 41 20 26L90 146L8 122L91 184L13 213L104 210L119 272H181L197 210L290 213L207 182L291 122L211 144L277 26Q224 43 169 130Z" fill="#4f1c40" stroke="#e475ad" stroke-width="5"/>
+<path d="M50 76L104 170M250 75L197 168M31 199L102 193M271 198L198 193" stroke="#ed79b3" opacity=".78" stroke-width="7"/>
+<path d="M30 329Q49 240 102 212L132 223H170L201 211Q256 234 272 329Z" fill="#361b3d" stroke="#b75b96" stroke-width="5"/>
+<path d="M97 220L145 259L112 328H63L49 278ZM202 219L157 259L185 328H246L258 276Z" fill="#633050" stroke="#e170a6" stroke-width="4"/>
+<path d="M119 252L150 283L181 252L186 330H114Z" fill="#2c1238" stroke="#f889c7" stroke-width="3"/>
+<!-- Crown, face and hair-spines -->
+<path d="M88 115L75 43L117 83L136 42L153 78L180 36L192 84L225 48L208 133Z" fill="#683457" stroke="#f78dbc" stroke-width="5"/>
+<path d="M103 116Q109 68 151 70Q197 75 204 118L198 187Q181 224 150 228Q119 219 104 187Z" fill="#a56b83" stroke="#f1a6ba" stroke-width="4"/>
+<path d="M112 139L137 149L131 161L114 155ZM185 139L161 149L167 161L188 155Z" fill="#ffb6e0" stroke="#fc4f94" stroke-width="4"/>
+<path d="M146 166L142 182L160 183M132 197L150 202L169 197" stroke="#64253f" stroke-width="4" fill="none"/>
+<path d="M100 130Q85 186 64 219M202 131Q216 185 237 218" stroke="#702f5e" stroke-width="16" fill="none"/>
+<path d="M90 110L110 92L94 59M211 108L193 93L209 57" stroke="#ff87c7" stroke-width="4" fill="none"/>
+
+<rect x="7" y="7" width="286" height="316" rx="2" fill="none" stroke="#fb76bb" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M8 39V8h31M261 8h31v31M8 291v31h31M261 322h31v-31" stroke="#fb76bb" stroke-width="3" opacity=".62" fill="none"/>
+</svg>
