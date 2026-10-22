@@ -180,6 +180,15 @@ function renderChatMessage(record) {
   if (isAtBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function historyCountLabel(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  let word = "сообщений";
+  if (mod10 === 1 && mod100 !== 11) word = "сообщение";
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) word = "сообщения";
+  return count + " " + word + " в истории";
+}
+
 async function refreshChat() {
   if (chatRefreshing) return;
   chatRefreshing = true;
@@ -197,7 +206,7 @@ async function refreshChat() {
     }
     for (const record of payload.messages) renderChatMessage(record);
     chatStatus.textContent = "Канал активен · " +
-      chatMessages.querySelectorAll(".chat-message").length + " сообщений в истории";
+      historyCountLabel(chatMessages.querySelectorAll(".chat-message").length);
   } catch (_) {
     chatStatus.textContent = "Нет связи с чатом · повторное подключение…";
   } finally {

@@ -3,6 +3,7 @@ import json
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -152,6 +153,14 @@ class ChatHttpTests(unittest.TestCase):
             "Зератул", "Артанис",
         ):
             self.assertIn(key, html)
+
+    def test_chat_count_uses_russian_plural(self):
+        script = (Path(__file__).resolve().parents[1] / "web" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("function historyCountLabel", script)
+        self.assertIn('"сообщение"', script)
+        self.assertIn('"сообщения"', script)
+        self.assertIn('"сообщений"', script)
+        self.assertNotIn("сообщений в истории", script)
 
 
 if __name__ == "__main__":
