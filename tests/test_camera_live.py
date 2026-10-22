@@ -1,12 +1,16 @@
 """HTTP smoke tests: no physical webcam required."""
 import json
 import threading
+import time
 import unittest
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import urlopen
 
-from camera_live import LiveHandler, backend_choices
+import cv2
+import numpy as np
+
+from camera_live import CameraWorker, LiveHandler, backend_choices, frame_notice
 
 
 class FakeCamera:
@@ -19,6 +23,7 @@ class FakeCamera:
             "online": self.online, "camera_index": 0, "width": 640,
             "height": 480, "fps": 12.5, "backend": "fake", "frames": 10,
             "last_frame_seconds": 0.1, "error": "" if self.online else "offline",
+            "notice": "",
         }
 
     def latest(self):
@@ -76,12 +81,20 @@ class CameraLiveHttpTests(unittest.TestCase):
         self.assertEqual(context.exception.code, 503)
 
     def test_stream_multipart_frame(self):
+        # One part is shorter than a fixed read, and the socket stays open.
+        # BufferedReader.read(n) would wait forever for the missing bytes.
         with urlopen(self.base + "/stream.mjpg", timeout=4) as response:
             self.assertEqual(response.status, 200)
             self.assertIn("multipart/x-mixed-replace", response.headers["Content-Type"])
-            data = response.read(74)
-            self.assertIn(b"image/jpeg", data)
+            data = b""
+            while b"\xff\xd9" not in data:
+                chunk = response.read(1)
+                self.assertTrue(chunk)
+                data += chunk
+                self.assertLess(len(data), 4096)
             self.assertIn(b"--frame", data)
+            self.assertIn(b"image/jpeg", data)
+            self.assertIn(b"\xff\xd8test-jpeg\xff\xd9", data)
 
     def test_not_found(self):
         with self.assertRaises(HTTPError) as context:
@@ -90,6 +103,71 @@ class CameraLiveHttpTests(unittest.TestCase):
 
     def test_backends(self):
         self.assertEqual(backend_choices("any")[0][0], "any")
+
+
+class FrameNoticeTests(unittest.TestCase):
+    def test_dark_flat_frame_warns_about_cover(self):
+        dark = np.full((48, 64, 3), 12, np.uint8)
+        self.assertIn("шторку", frame_notice(dark))
+
+    def test_normal_contrast_frame_has_no_notice(self):
+        frame = np.zeros((48, 64, 3), np.uint8)
+        frame[:, :32] = 30
+        frame[:, 32:] = 210
+        self.assertEqual(frame_notice(frame), "")
+
+
+class ScriptedCapture:
+    plan = []
+
+    def __init__(self, index, backend):
+        self.reads = list(ScriptedCapture.plan.pop(0))
+
+    def isOpened(self):
+        return True
+
+    def set(self, *args):
+        return True
+
+    def read(self):
+        item = self.reads.pop(0)
+        if item is None:
+            return False, None
+        return True, item
+
+    def release(self):
+        return None
+
+
+class CameraWorkerRecoveryTests(unittest.TestCase):
+    def test_reconnects_after_read_failures_and_reports_dark_frame(self):
+        good = np.full((32, 32, 3), 180, np.uint8)
+        dark = np.full((32, 32, 3), 10, np.uint8)
+        ScriptedCapture.plan = [
+            [good, good, good, good, None, None, None, None, None, None, None, None],
+            [dark] * 20,
+        ]
+        original = cv2.VideoCapture
+        cv2.VideoCapture = ScriptedCapture
+        worker = CameraWorker(0, 32, 32, 5, 75, "any")
+        try:
+            worker.start()
+            saw_good = False
+            saw_notice = False
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline and not (saw_good and saw_notice):
+                status = worker.status()
+                if status["online"] and status["width"] == 32 and not status["notice"]:
+                    saw_good = True
+                if status["online"] and "шторку" in status["notice"]:
+                    saw_notice = True
+                time.sleep(0.05)
+            self.assertTrue(saw_good)
+            self.assertTrue(saw_notice)
+            self.assertGreater(worker.status()["frames"], 1)
+        finally:
+            worker.stop()
+            cv2.VideoCapture = original
 
 
 if __name__ == "__main__":

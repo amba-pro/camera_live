@@ -9,6 +9,7 @@ const source = document.getElementById("source");
 const message = document.getElementById("message");
 const snapshot = document.getElementById("snapshot");
 const stream = document.getElementById("stream");
+const notice = document.getElementById("notice");
 let lastOnline = false;
 
 async function refreshStatus() {
@@ -26,8 +27,11 @@ async function refreshStatus() {
     fps.textContent = online ? data.fps + " FPS" : "— FPS";
     source.textContent = "Camera " + data.camera_index + (online ? " · " + data.backend : "");
     snapshot.setAttribute("aria-disabled", online ? "false" : "true");
+    const note = online ? (data.notice || "") : "";
+    notice.textContent = note;
+    notice.classList.toggle("hidden", !note);
     message.textContent = online
-      ? "Трансляция активна. Изображение доступно на этом сервере."
+      ? (note || "Трансляция активна. Изображение доступно на этом сервере.")
       : (data.error || "Повторное подключение камеры…");
     if (online && !lastOnline) {
       // Restore an image connection after a camera disconnect.
@@ -40,6 +44,7 @@ async function refreshStatus() {
     stateLabel.textContent = "Сервер недоступен";
     overlay.classList.remove("hidden");
     overlayLabel.textContent = "Нет связи с сервером";
+    notice.classList.add("hidden");
     snapshot.setAttribute("aria-disabled", "true");
     message.textContent = "Ошибка соединения: " + error.message;
   }

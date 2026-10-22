@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
+import signal
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +19,12 @@ import cv2
 ROOT = Path(__file__).resolve().parent
 WEB = ROOT / "web"
 STALE_AFTER_SECONDS = 3.0
+DARK_FRAME_MEAN = 22.0
+DARK_FRAME_STD = 6.0
+COVERED_LENS_NOTICE = (
+    "Кадры идут, но изображение почти чёрное. "
+    "Откройте шторку камеры и проверьте, что объектив не закрыт."
+)
 
 
 def backend_choices(name: str) -> list[tuple[str, int]]:
@@ -32,6 +41,65 @@ def backend_choices(name: str) -> list[tuple[str, int]]:
             ("any", cv2.CAP_ANY),
         ]
     return [("any", cv2.CAP_ANY)]
+
+
+def enable_console_interrupt() -> None:
+    """Let Ctrl+C reach Python on Windows, including a new console process group."""
+    if os.name != "nt":
+        return
+    try:
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(None, False)
+    except (AttributeError, OSError):
+        pass
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, signal.default_int_handler)
+
+
+def configure_stdio() -> None:
+    """Show Russian text in a UTF-8 Windows console (see start_windows.bat)."""
+    if os.name != "nt":
+        return
+    try:
+        utf8_console = ctypes.windll.kernel32.GetConsoleOutputCP() == 65001
+    except (AttributeError, OSError):
+        utf8_console = False
+    encoding = os.environ.get("PYTHONIOENCODING", "").split(":")[0].lower()
+    if not utf8_console and encoding != "utf-8":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
+
+
+def frame_notice(frame: object) -> str:
+    """Warn when frames arrive but the lens is covered or the shutter is closed."""
+    sample = frame[::16, ::16] if getattr(frame, "shape", (0,))[0] > 16 else frame
+    mean = float(sample.mean())
+    std = float(sample.std())
+    if mean < DARK_FRAME_MEAN and std < DARK_FRAME_STD:
+        return COVERED_LENS_NOTICE
+    return ""
+
+
+def _quiet_opencv_logs():
+    logging = getattr(getattr(cv2, "utils", None), "logging", None)
+    if logging is None or not hasattr(logging, "setLogLevel"):
+        return None
+    previous = logging.getLogLevel() if hasattr(logging, "getLogLevel") else None
+    silent = getattr(logging, "LOG_LEVEL_SILENT", logging.LOG_LEVEL_ERROR)
+    logging.setLogLevel(silent)
+    return previous
+
+
+def _restore_opencv_logs(previous) -> None:
+    logging = getattr(getattr(cv2, "utils", None), "logging", None)
+    if previous is not None and logging is not None:
+        logging.setLogLevel(previous)
 
 
 class CameraWorker:
@@ -56,7 +124,8 @@ class CameraWorker:
         self.actual_fps = 0.0
         self.active_backend = ""
         self.connected = False
-        self.error = "Ожидание камеры"
+        self.error = "Открываем камеру…"
+        self.notice = ""
         self._fps_counter = 0
         self._fps_start = time.monotonic()
 
@@ -78,6 +147,7 @@ class CameraWorker:
             self.error = message
             self.connected = False
             self.actual_fps = 0.0
+            self.notice = ""
             self.condition.notify_all()
 
     def _open(self) -> tuple[cv2.VideoCapture | None, str, object | None]:
@@ -91,6 +161,7 @@ class CameraWorker:
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
             cap.set(cv2.CAP_PROP_FPS, self.fps_limit)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             # An opened device may still not return images. Try the next backend.
             first_frame = None
             for _ in range(4):
@@ -123,6 +194,7 @@ class CameraWorker:
             self.active_backend = backend_name
             self.connected = True
             self.error = ""
+            self.notice = frame_notice(frame)
             self._fps_counter += 1
             elapsed = now - self._fps_start
             if elapsed >= 1.0:
@@ -184,6 +256,7 @@ class CameraWorker:
                 "frames": self.seq,
                 "last_frame_seconds": round(age, 1) if age is not None else None,
                 "error": "" if online else (self.error or "Нет новых кадров"),
+                "notice": self.notice if online else "",
             }
 
     def latest(self) -> bytes | None:
@@ -274,26 +347,39 @@ class LiveHandler(BaseHTTPRequestHandler):
 
 
 def list_cameras() -> None:
-    print("Проверка индексов камер 0–5 (закройте Zoom/Teams/Камеру Windows):")
+    configure_stdio()
+    print("Проверка индексов камер 0–5 (закройте Zoom/Teams/Камеру Windows):", flush=True)
     found = 0
-    for index in range(6):
-        for backend_name, backend in backend_choices("auto"):
-            cap = cv2.VideoCapture(index, backend)
-            try:
-                if cap.isOpened():
-                    ok, frame = cap.read()
-                    if ok and frame is not None:
-                        h, w = frame.shape[:2]
-                        print(f"  camera={index} backend={backend_name} {w}x{h}")
-                        found += 1
-                        break
-            finally:
-                cap.release()
+    previous_logs = _quiet_opencv_logs()
+    try:
+        for index in range(6):
+            for backend_name, backend in backend_choices("auto"):
+                cap = cv2.VideoCapture(index, backend)
+                try:
+                    if cap.isOpened():
+                        ok, frame = cap.read()
+                        if ok and frame is not None:
+                            h, w = frame.shape[:2]
+                            print(
+                                f"  camera={index} backend={backend_name} {w}x{h}",
+                                flush=True,
+                            )
+                            found += 1
+                            break
+                finally:
+                    cap.release()
+    finally:
+        _restore_opencv_logs(previous_logs)
     if not found:
-        print("Ни одной камеры не найдено. Проверьте USB/драйвер/разрешения Windows.")
+        print(
+            "Ни одной камеры не найдено. Проверьте USB/драйвер/разрешения Windows.",
+            flush=True,
+        )
 
 
 def main() -> None:
+    enable_console_interrupt()
+    configure_stdio()
     parser = argparse.ArgumentParser(description="USB webcam to browser (MJPEG)")
     parser.add_argument("--camera", type=int, default=0)
     parser.add_argument("--list-cameras", action="store_true")
