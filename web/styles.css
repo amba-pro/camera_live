@@ -35,5 +35,6 @@ h1{font-size:clamp(26px,4vw,38px);margin:0;font-weight:750;letter-spacing:-.03em
 .button.primary:hover{background:#328cc3}
 .button[aria-disabled=true]{opacity:.45;pointer-events:none}
 .note{margin-top:17px;padding:14px 18px;border:1px solid #29384b;border-radius:11px;color:#98a9c0;font-size:13px;min-height:45px;overflow-wrap:anywhere}
+.lan{margin:10px 0 0;color:#9ecbff;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 footer{margin:31px 0 50px;text-align:center;font-size:12px;color:#647488}
 @media(max-width:780px){.env{display:none}.heading{flex-direction:column;align-items:flex-start;margin:28px 0 22px}.toolbar{flex-direction:column;align-items:stretch}.actions{flex-wrap:wrap}.button{flex:1}.live-label{top:12px;left:12px}.shell{width:min(100% - 22px,1180px)}}

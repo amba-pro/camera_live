@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import ipaddress
 import json
 import os
 import signal
+import socket
 import sys
 import threading
 import time
@@ -206,6 +208,38 @@ def directshow_device_names() -> list[str]:
     except (OSError, ctypes.ArgumentError):
         return names
     return names
+
+
+def is_phone_lan_ip(ip: str) -> bool:
+    """Home-LAN addresses a phone can open. Skips Tailscale, VirtualBox and the Windows hotspot."""
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    if not address.is_private or address.is_loopback or address.is_link_local:
+        return False
+    if address in ipaddress.ip_network("100.64.0.0/10"):
+        return False
+    if address in ipaddress.ip_network("192.168.56.0/24"):
+        return False
+    if address in ipaddress.ip_network("192.168.137.0/24"):
+        return False
+    return True
+
+
+def phone_lan_urls(port: int) -> list[str]:
+    urls: list[str] = []
+    try:
+        infos = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
+    except OSError:
+        return urls
+    for info in infos:
+        ip = info[4][0]
+        url = f"http://{ip}:{port}"
+        if is_phone_lan_ip(ip) and url not in urls:
+            urls.append(url)
+    home = [url for url in urls if "://192.168." in url or "://172." in url]
+    return home or urls
 
 
 def select_camera_index(names: list[str], explicit: int | None, name_query: str) -> tuple[int, str]:
@@ -432,7 +466,10 @@ class LiveHandler(BaseHTTPRequestHandler):
             self._respond(200, "text/javascript; charset=utf-8",
                           (WEB / "app.js").read_bytes())
         elif path == "/api/status":
-            body = json.dumps(self.camera.status(), ensure_ascii=False).encode("utf-8")
+            payload = self.camera.status()
+            host, port = self.server.server_address[:2]
+            payload["lan_urls"] = [] if host in ("127.0.0.1", "localhost", "::1") else phone_lan_urls(port)
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self._respond(200, "application/json; charset=utf-8", body)
         elif path == "/snapshot.jpg":
             frame = self.camera.latest()
@@ -560,8 +597,9 @@ def main() -> None:
     camera.start()
     print(f"Camera Live: http://127.0.0.1:{args.port}")
     if args.host not in ("127.0.0.1", "localhost", "::1"):
-        print("ВНИМАНИЕ: сервер без пароля/HTTPS. Только доверенная LAN или VPN!")
-        print(f"Открыть в сети: http://<IP-НОУТБУКА>:{args.port}")
+        print("ВНИМАНИЕ: сервер без пароля и HTTPS. Только доверенная локальная сеть.")
+        for url in phone_lan_urls(args.port):
+            print(f"С телефона: {url}", flush=True)
     print("Остановка: Ctrl+C")
     try:
         server.serve_forever(poll_interval=0.25)

@@ -11,7 +11,8 @@ import cv2
 import numpy as np
 
 from camera_live import (
-    CameraWorker, LiveHandler, backend_choices, frame_notice, select_camera_index,
+    CameraWorker, LiveHandler, backend_choices, frame_notice, is_phone_lan_ip,
+    phone_lan_urls, select_camera_index,
 )
 
 
@@ -123,6 +124,27 @@ class CameraSelectionTests(unittest.TestCase):
     def test_missing_name_raises(self):
         with self.assertRaises(ValueError):
             select_camera_index(["USB2.0 HD UVC WebCam"], None, "C920")
+
+    def test_phone_lan_addresses(self):
+        self.assertTrue(is_phone_lan_ip("192.168.50.7"))
+        self.assertTrue(is_phone_lan_ip("192.168.186.166"))
+        self.assertFalse(is_phone_lan_ip("127.0.0.1"))
+        self.assertFalse(is_phone_lan_ip("100.110.93.103"))
+        self.assertFalse(is_phone_lan_ip("192.168.56.1"))
+        self.assertFalse(is_phone_lan_ip("192.168.137.1"))
+
+    def test_phone_urls_prefer_home_lan(self):
+        import unittest.mock
+        infos = [
+            (None, None, None, None, ("10.110.100.2", 0)),
+            (None, None, None, None, ("192.168.50.7", 0)),
+            (None, None, None, None, ("192.168.186.166", 0)),
+        ]
+        with unittest.mock.patch("camera_live.socket.getaddrinfo", return_value=infos):
+            self.assertEqual(
+                phone_lan_urls(8000),
+                ["http://192.168.50.7:8000", "http://192.168.186.166:8000"],
+            )
 
 
 class FrameNoticeTests(unittest.TestCase):
