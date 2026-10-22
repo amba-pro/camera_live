@@ -121,7 +121,8 @@ class OverlayStore:
                 cleaned.append([_coordinate(point[0]), _coordinate(point[1])])
             color = payload.get("color")
             width = payload.get("width")
-            if color not in COLORS or isinstance(width, bool) or width not in WIDTHS:
+            if (not isinstance(color, str) or color not in COLORS or
+                    isinstance(width, bool) or not isinstance(width, int) or width not in WIDTHS):
                 raise OverlayError("Неизвестный цвет или толщина пера.")
             event.update(points=cleaned, color=color, width=width)
         elif kind == "reaction":
