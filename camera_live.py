@@ -595,6 +595,13 @@ class LiveHandler(BaseHTTPRequestHandler):
         elif path == "/app.js":
             self._respond(200, "text/javascript; charset=utf-8",
                           (WEB / "app.js").read_bytes())
+        elif path in (
+            "/art/raynor.svg", "/art/kerrigan.svg",
+            "/art/zeratul.svg", "/art/artanis.svg",
+        ):
+            art_name = path.rsplit("/", 1)[1]
+            self._respond(200, "image/svg+xml; charset=utf-8",
+                          (WEB / "art" / art_name).read_bytes())
         elif path == "/api/chat":
             try:
                 values = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
