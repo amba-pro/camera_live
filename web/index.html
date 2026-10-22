@@ -4,51 +4,135 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Camera Live · VIL</title>
+  <meta name="theme-color" content="#080d19">
+  <meta name="description" content="Фанатская страница стримера StarCraft с прямым видео и чатом локальной сети.">
+  <title>Koprulu Command · StarCraft Stream</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
+  <div class="starfield" aria-hidden="true"></div>
   <main class="shell">
     <header class="header">
-      <div class="brand"><span class="brand-icon">◉</span><span>VIL <b>Camera Live</b></span></div>
-      <span class="env">Windows USB camera → browser</span>
+      <div class="brand">
+        <span class="brand-emblem" aria-hidden="true">✦</span>
+        <span class="brand-copy"><b>KOPRULU</b><span>COMMAND NETWORK</span></span>
+      </div>
+      <nav class="top-nav" aria-label="Навигация">
+        <a class="nav-active" href="#live-stream">ТРАНСЛЯЦИЯ</a>
+        <a href="#heroes">ГЕРОИ</a>
+        <a href="#live-chat">ЧАТ</a>
+      </nav>
+      <div class="top-right"><span class="signal">● СЕКТОР ОНЛАЙН</span><span class="stream-number">TRANSMISSION // 001</span></div>
     </header>
 
-    <div class="heading">
+    <section class="heading" aria-labelledby="stream-title">
       <div>
-        <p class="eyebrow">LIVE MONITORING</p>
-        <h1>Прямой эфир с камеры</h1>
-        <p class="subtitle">Видео с USB-камеры ноутбука. Без облака, записи и отправки кадров сторонним сервисам.</p>
+        <p class="eyebrow"><span class="tiny-square"></span> ПРЯМОЙ ЭФИР · СЕКТОР КОПРУЛУ</p>
+        <h1 id="stream-title">STARCRAFT <span>LIVE</span></h1>
+        <p class="subtitle">Командный мостик открыт. Камера в эфире, зрители — в чате. За терранов, протоссов и зергов!</p>
       </div>
-      <div id="state" class="status offline"><span class="dot"></span><span id="state-label">Подключение…</span></div>
-    </div>
-
-    <section class="panel" aria-label="Видеопоток">
-      <div class="player">
-        <img id="stream" src="/stream.mjpg" alt="Трансляция с USB-камеры">
-        <div id="overlay" class="overlay"><div class="loader"></div><span id="overlay-label">Ожидание кадра камеры…</span></div>
-        <div id="notice" class="frame-notice hidden"></div>
-        <span class="live-label"><span class="live-dot"></span> LIVE</span>
-      </div>
-      <div class="toolbar">
-        <div class="meta">
-          <span id="resolution">— × —</span>
-          <span class="separator">•</span>
-          <span id="fps">— FPS</span>
-          <span class="separator">•</span>
-          <span id="source">Camera 0</span>
-        </div>
-        <div class="actions">
-          <a href="/snapshot.jpg" id="snapshot" class="button" download="camera-snapshot.jpg" aria-disabled="true">Сохранить кадр</a>
-          <button type="button" id="reconnect" class="button primary">Обновить видео</button>
-        </div>
-      </div>
+      <div id="state" class="status offline" aria-live="polite"><span class="dot"></span><span id="state-label">Подключение…</span></div>
     </section>
 
-    <div class="note" id="message" role="status">Подключаемся к камере…</div>
-    <p id="lan" class="lan" hidden></p>
-    <footer>camera_live · Virtual Inspection Lab · MJPEG over HTTP</footer>
+    <div class="main-grid">
+      <div class="stream-column">
+        <section class="panel stream-panel" id="live-stream" aria-label="Прямой эфир">
+          <div class="panel-topline">
+            <span><i class="square" aria-hidden="true"></i> FEED / CAMERA 01</span>
+            <span class="panel-top-right">TERRAN BROADCAST NETWORK</span>
+          </div>
+          <div class="player">
+            <img id="stream" src="/stream.mjpg" alt="Прямая трансляция с USB-камеры">
+            <div id="overlay" class="overlay">
+              <div class="loader" aria-hidden="true"></div>
+              <span id="overlay-label">Ожидание сигнала с камеры…</span>
+            </div>
+            <div id="notice" class="frame-notice hidden" role="alert"></div>
+            <span class="live-label"><span class="live-dot"></span> LIVE</span>
+            <span class="feed-marker" aria-hidden="true">REC ● CAM 01</span>
+            <span class="reticle r-tl" aria-hidden="true"></span>
+            <span class="reticle r-tr" aria-hidden="true"></span>
+            <span class="reticle r-bl" aria-hidden="true"></span>
+            <span class="reticle r-br" aria-hidden="true"></span>
+          </div>
+          <div class="toolbar">
+            <div class="meta">
+              <span class="meta-label">SIGNAL</span>
+              <span id="resolution">— × —</span>
+              <span class="separator">/</span>
+              <span id="fps">— FPS</span>
+              <span class="separator">/</span>
+              <span id="source">Camera 0</span>
+            </div>
+            <div class="actions">
+              <a href="/snapshot.jpg" id="snapshot" class="button" download="koprulu-snapshot.jpg" aria-disabled="true">◫ Сохранить кадр</a>
+              <button type="button" id="reconnect" class="button primary">↻ Переподключить</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="under-stream">
+          <div class="commander-card">
+            <div class="commander-icon" aria-hidden="true">⌘</div>
+            <div>
+              <div class="mini-eyebrow">COMMANDER'S BRIEFING</div>
+              <strong>С возвращением, командир.</strong>
+              <p>Вы на фанатском канале StarCraft. Камера передаёт видео с ноутбука, а сообщения доступны всем зрителям этого сервера.</p>
+            </div>
+          </div>
+          <div class="note" id="message" role="status">Устанавливаем связь с камерой…</div>
+          <p id="lan" class="lan" hidden></p>
+        </div>
+
+        <section class="heroes-section" id="heroes" aria-labelledby="heroes-title">
+          <div class="section-heading">
+            <div><p class="mini-eyebrow">THE LEGENDS</p><h2 id="heroes-title">Легенды сектора</h2></div>
+            <span class="section-code">4 / HERO DOSSIERS</span>
+          </div>
+          <div class="heroes-grid">
+            <article class="hero-card hero-terran">
+              <img src="/art/raynor.svg" alt="Авторская стилизация Джима Рейнора в броне" loading="lazy">
+              <div class="hero-info"><span class="faction">TERRAN // 01</span><h3>Джим Рейнор</h3><p>Бунтарь. Командир. Легенда.</p></div>
+            </article>
+            <article class="hero-card hero-zerg">
+              <img src="/art/kerrigan.svg" alt="Авторская стилизация Сары Керриган" loading="lazy">
+              <div class="hero-info"><span class="faction">ZERG // 02</span><h3>Сара Керриган</h3><p>Королева Клинков.</p></div>
+            </article>
+            <article class="hero-card hero-protoss">
+              <img src="/art/zeratul.svg" alt="Авторская стилизация Зератула" loading="lazy">
+              <div class="hero-info"><span class="faction">PROTOSS // 03</span><h3>Зератул</h3><p>Тёмный тамплиер.</p></div>
+            </article>
+            <article class="hero-card hero-artanis">
+              <img src="/art/artanis.svg" alt="Авторская стилизация Артаниса" loading="lazy">
+              <div class="hero-info"><span class="faction">DAELAAM // 04</span><h3>Артанис</h3><p>Иерарх протоссов.</p></div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <aside id="live-chat" class="chat-panel" aria-labelledby="chat-title">
+        <div class="chat-header">
+          <div class="chat-icon" aria-hidden="true">▤</div>
+          <div><span class="mini-eyebrow">COMMS CHANNEL</span><h2 id="chat-title">Чат трансляции</h2></div>
+          <span class="chat-live" title="Локальный чат сервера">LIVE</span>
+        </div>
+        <div class="chat-subheader"><span class="chat-pulse"></span><span id="chat-status" role="status">Подключаемся к каналу…</span></div>
+        <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-relevant="additions">
+          <div id="chat-empty" class="chat-empty"><div class="chat-empty-icon">✧</div><strong>На связи?</strong><p>Будь первым, кто передаст сообщение в сектор Копрулу.</p></div>
+        </div>
+        <form id="chat-form" class="chat-form" autocomplete="off">
+          <label for="chat-nickname">ПОЗЫВНОЙ</label>
+          <input id="chat-nickname" name="nickname" placeholder="Ваш ник" maxlength="24" autocomplete="nickname" required>
+          <label for="chat-text">СООБЩЕНИЕ</label>
+          <textarea id="chat-text" name="text" placeholder="Написать в чат…" rows="2" maxlength="300" required></textarea>
+          <div class="chat-form-bottom"><small id="chat-count">0 / 300</small><button type="submit" id="chat-send" class="button primary">ОТПРАВИТЬ ↗</button></div>
+          <p id="chat-error" class="chat-error" role="alert" hidden></p>
+        </form>
+        <div class="chat-footer">Сообщения видны в локальной сети · Без регистрации · Хранятся до перезапуска сервера</div>
+      </aside>
+    </div>
+    <footer class="footer"><span>KOPRULU COMMAND NETWORK <span class="footer-dim">/ VIRTUAL INSPECTION LAB</span></span><span>Фанатский дизайн StarCraft · Не связан с Blizzard Entertainment</span></footer>
   </main>
 </body>
 </html>
