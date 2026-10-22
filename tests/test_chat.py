@@ -143,6 +143,26 @@ class ChatHttpTests(unittest.TestCase):
             urlopen(self.base + "/art/../../camera_live.py")
         self.assertEqual(result.exception.code, 404)
 
+    def test_cinematic_background_is_local_and_decorative(self):
+        with urlopen(self.base + "/") as response:
+            html = response.read().decode("utf-8")
+        with urlopen(self.base + "/styles.css") as response:
+            css = response.read().decode("utf-8")
+        for marker in (
+            'class="character-backdrop"', 'class="broadcast-stage"',
+            'class="stage-art"', 'class="stage-portrait stage-raynor"',
+            'class="stage-portrait stage-artanis"',
+            'class="stage-portrait stage-kerrigan"',
+            'aria-hidden="true"',
+        ):
+            self.assertIn(marker, html)
+        for image in ("raynor.svg", "artanis.svg", "kerrigan.svg"):
+            self.assertIn("/art/" + image, css)
+        for selector in (".character-backdrop", ".broadcast-stage",
+                         ".stage-portrait", "@media(max-width:700px)"):
+            self.assertIn(selector, css)
+        self.assertIn("pointer-events:none", css)
+
     def test_page_contains_all_stream_and_chat_nodes(self):
         with urlopen(self.base + "/") as response:
             html = response.read().decode("utf-8")
