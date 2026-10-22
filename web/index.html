@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Camera Live · VIL</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="brand"><span class="brand-icon">◉</span><span>VIL <b>Camera Live</b></span></div>
+      <span class="env">Windows USB camera → browser</span>
+    </header>
+
+    <div class="heading">
+      <div>
+        <p class="eyebrow">LIVE MONITORING</p>
+        <h1>Прямой эфир с камеры</h1>
+        <p class="subtitle">Видео с USB-камеры ноутбука. Без облака, записи и отправки кадров сторонним сервисам.</p>
+      </div>
+      <div id="state" class="status offline"><span class="dot"></span><span id="state-label">Подключение…</span></div>
+    </div>
+
+    <section class="panel" aria-label="Видеопоток">
+      <div class="player">
+        <img id="stream" src="/stream.mjpg" alt="Трансляция с USB-камеры">
+        <div id="overlay" class="overlay"><div class="loader"></div><span id="overlay-label">Ожидание кадра камеры…</span></div>
+        <span class="live-label"><span class="live-dot"></span> LIVE</span>
+      </div>
+      <div class="toolbar">
+        <div class="meta">
+          <span id="resolution">— × —</span>
+          <span class="separator">•</span>
+          <span id="fps">— FPS</span>
+          <span class="separator">•</span>
+          <span id="source">Camera 0</span>
+        </div>
+        <div class="actions">
+          <a href="/snapshot.jpg" id="snapshot" class="button" download="camera-snapshot.jpg" aria-disabled="true">Сохранить кадр</a>
+          <button type="button" id="reconnect" class="button primary">Обновить видео</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="note" id="message" role="status">Подключаемся к камере…</div>
+    <footer>camera_live · Virtual Inspection Lab · MJPEG over HTTP</footer>
+  </main>
+</body>
+</html>
