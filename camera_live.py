@@ -102,12 +102,138 @@ def _restore_opencv_logs(previous) -> None:
         logging.setLogLevel(previous)
 
 
+class _GUID(ctypes.Structure):
+    _fields_ = [
+        ("Data1", ctypes.c_ulong),
+        ("Data2", ctypes.c_ushort),
+        ("Data3", ctypes.c_ushort),
+        ("Data4", ctypes.c_ubyte * 8),
+    ]
+
+
+class _VariantValue(ctypes.Union):
+    _fields_ = [("bstr", ctypes.c_void_p), ("ll", ctypes.c_ulonglong)]
+
+
+class _VARIANT(ctypes.Structure):
+    _fields_ = [
+        ("vt", ctypes.c_ushort),
+        ("r1", ctypes.c_ushort),
+        ("r2", ctypes.c_ushort),
+        ("r3", ctypes.c_ushort),
+        ("value", _VariantValue),
+        ("pad", ctypes.c_void_p),
+    ]
+
+
+def _guid(text: str) -> _GUID:
+    part1, part2, part3, part4, part5 = text.split("-")
+    value = _GUID()
+    value.Data1 = int(part1, 16)
+    value.Data2 = int(part2, 16)
+    value.Data3 = int(part3, 16)
+    value.Data4[:] = bytes.fromhex(part4 + part5)
+    return value
+
+
+def _com_method(ptr: ctypes.c_void_p, index: int, restype, argtypes):
+    table = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_void_p))
+    functions = ctypes.cast(table[0], ctypes.POINTER(ctypes.c_void_p))
+    prototype = ctypes.WINFUNCTYPE(restype, ctypes.c_void_p, *argtypes)
+    return prototype(functions[index])
+
+
+def directshow_device_names() -> list[str]:
+    """Friendly names in the same order as OpenCV CAP_DSHOW indexes."""
+    if os.name != "nt":
+        return []
+    ole32 = ctypes.WinDLL("ole32")
+    oleaut = ctypes.WinDLL("oleaut32")
+    oleaut.SysFreeString.argtypes = [ctypes.c_void_p]
+    oleaut.SysFreeString.restype = None
+    if ole32.CoInitialize(None) < 0:
+        return []
+    device = ctypes.c_void_p()
+    enumerator = ctypes.c_void_p()
+    names: list[str] = []
+    try:
+        created = ole32.CoCreateInstance(
+            ctypes.byref(_guid("62BE5D10-60EB-11d0-BD3B-00A0C911CE86")),
+            None,
+            1,
+            ctypes.byref(_guid("29840822-5B84-11D0-BD3B-00A0C911CE86")),
+            ctypes.byref(device),
+        )
+        if created != 0 or not device:
+            return []
+        listed = _com_method(
+            device, 3, ctypes.HRESULT, [ctypes.POINTER(_GUID), ctypes.POINTER(ctypes.c_void_p), ctypes.c_ulong]
+        )(device, ctypes.byref(_guid("860BB310-5D01-11d0-BD3B-00A0C911CE86")), ctypes.byref(enumerator), 0)
+        if listed != 0 or not enumerator:
+            return []
+        while True:
+            moniker = ctypes.c_void_p()
+            fetched = ctypes.c_ulong()
+            next_hr = _com_method(
+                enumerator, 3, ctypes.HRESULT,
+                [ctypes.c_ulong, ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_ulong)],
+            )(enumerator, 1, ctypes.byref(moniker), ctypes.byref(fetched))
+            if next_hr != 0 or not moniker:
+                break
+            bag = ctypes.c_void_p()
+            variant = _VARIANT()
+            try:
+                bound = _com_method(
+                    moniker, 9, ctypes.HRESULT,
+                    [ctypes.c_void_p, ctypes.c_void_p, ctypes.POINTER(_GUID), ctypes.POINTER(ctypes.c_void_p)],
+                )(moniker, None, None, ctypes.byref(_guid("55272A00-42CB-11CE-8135-00AA004BB851")), ctypes.byref(bag))
+                if bound != 0 or not bag:
+                    names.append("")
+                    continue
+                read = _com_method(
+                    bag, 3, ctypes.HRESULT, [ctypes.c_wchar_p, ctypes.POINTER(_VARIANT), ctypes.c_void_p]
+                )(bag, "FriendlyName", ctypes.byref(variant), None)
+                if read == 0 and variant.value.bstr:
+                    names.append(ctypes.wstring_at(variant.value.bstr))
+                else:
+                    names.append("")
+            finally:
+                if variant.vt == 8 and variant.value.bstr:
+                    oleaut.SysFreeString(variant.value.bstr)
+                if bag:
+                    _com_method(bag, 2, ctypes.c_ulong, [])(bag)
+                _com_method(moniker, 2, ctypes.c_ulong, [])(moniker)
+    except (OSError, ctypes.ArgumentError):
+        return names
+    return names
+
+
+def select_camera_index(names: list[str], explicit: int | None, name_query: str) -> tuple[int, str]:
+    """Pick an explicit index, a name query, or a connected Logitech before the laptop camera."""
+    if name_query:
+        query = name_query.casefold()
+        for index, name in enumerate(names):
+            if query in name.casefold():
+                return index, name
+        known = ", ".join(f"{index}: {name}" for index, name in enumerate(names)) or "нет устройств"
+        raise ValueError(f"Камера '{name_query}' не найдена. {known}")
+    if explicit is not None:
+        name = names[explicit] if 0 <= explicit < len(names) else ""
+        return explicit, name
+    for hint in ("c920", "logitech"):
+        for index, name in enumerate(names):
+            if hint in name.casefold():
+                return index, name
+    return 0, names[0] if names else ""
+
+
 class CameraWorker:
     """One camera reader shared by all HTTP clients (not one capture per viewer)."""
 
     def __init__(self, index: int, width: int, height: int,
-                 fps: int, jpeg_quality: int, backend: str) -> None:
+                 fps: int, jpeg_quality: int, backend: str, camera_name: str = "") -> None:
         self.index = index
+        self.camera_name = camera_name
         self.width = width
         self.height = height
         self.fps_limit = fps
@@ -249,6 +375,7 @@ class CameraWorker:
             return {
                 "online": online,
                 "camera_index": self.index,
+                "camera_name": self.camera_name,
                 "width": self.actual_width if online else 0,
                 "height": self.actual_height if online else 0,
                 "fps": self.actual_fps if online else 0,
@@ -348,40 +475,58 @@ class LiveHandler(BaseHTTPRequestHandler):
 
 def list_cameras() -> None:
     configure_stdio()
-    print("Проверка индексов камер 0–5 (закройте Zoom/Teams/Камеру Windows):", flush=True)
+    names = directshow_device_names()
+    print("Камеры DirectShow (закройте Zoom/Teams/Камеру Windows):", flush=True)
+    for index, name in enumerate(names):
+        print(f"  [{index}] {name}", flush=True)
     found = 0
     previous_logs = _quiet_opencv_logs()
     try:
-        for index in range(6):
+        count = max(6, len(names))
+        for index in range(count):
+            label = names[index] if index < len(names) else ""
             for backend_name, backend in backend_choices("auto"):
                 cap = cv2.VideoCapture(index, backend)
                 try:
-                    if cap.isOpened():
-                        ok, frame = cap.read()
-                        if ok and frame is not None:
-                            h, w = frame.shape[:2]
-                            print(
-                                f"  camera={index} backend={backend_name} {w}x{h}",
-                                flush=True,
-                            )
-                            found += 1
+                    if not cap.isOpened():
+                        continue
+                    frame = None
+                    for _ in range(4):
+                        ok, candidate = cap.read()
+                        if ok and candidate is not None:
+                            frame = candidate
                             break
+                    if frame is not None:
+                        height, width = frame.shape[:2]
+                        print(
+                            f"  открыта camera={index} name={label!r} "
+                            f"backend={backend_name} {width}x{height}",
+                            flush=True,
+                        )
+                        found += 1
+                        break
                 finally:
                     cap.release()
     finally:
         _restore_opencv_logs(previous_logs)
     if not found:
         print(
-            "Ни одной камеры не найдено. Проверьте USB/драйвер/разрешения Windows.",
+            "Ни одной камеры не открылось. Проверьте USB/драйвер/разрешения Windows.",
             flush=True,
         )
+        return
+    index, name = select_camera_index(names, None, "")
+    print(f"Автовыбор без --camera: {index} {name}", flush=True)
 
 
 def main() -> None:
     enable_console_interrupt()
     configure_stdio()
     parser = argparse.ArgumentParser(description="USB webcam to browser (MJPEG)")
-    parser.add_argument("--camera", type=int, default=0)
+    parser.add_argument("--camera", type=int, default=None,
+                        help="OpenCV index. По умолчанию Logitech/C920, если она подключена, иначе 0.")
+    parser.add_argument("--camera-name", default="",
+                        help="Часть имени DirectShow, например C920. Важнее индекса.")
     parser.add_argument("--list-cameras", action="store_true")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
@@ -394,12 +539,20 @@ def main() -> None:
     if args.list_cameras:
         list_cameras()
         return
-    if not (0 <= args.camera <= 50 and 1 <= args.port <= 65535 and
+    try:
+        camera_index, camera_name = select_camera_index(
+            directshow_device_names(), args.camera, args.camera_name
+        )
+    except ValueError as exc:
+        parser.error(str(exc))
+    if not (0 <= camera_index <= 50 and 1 <= args.port <= 65535 and
             1 <= args.fps <= 60 and 1 <= args.width <= 7680 and
             1 <= args.height <= 4320 and 40 <= args.jpeg_quality <= 95):
         parser.error("Проверьте camera/port/fps/width/height/jpeg-quality.")
+    print(f"Камера: {camera_index} {camera_name}".rstrip(), flush=True)
     camera = CameraWorker(
-        args.camera, args.width, args.height, args.fps, args.jpeg_quality, args.backend
+        camera_index, args.width, args.height, args.fps, args.jpeg_quality,
+        args.backend, camera_name,
     )
     server = ThreadingHTTPServer((args.host, args.port), LiveHandler)
     server.daemon_threads = True

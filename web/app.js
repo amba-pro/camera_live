@@ -25,7 +25,8 @@ async function refreshStatus() {
     overlayLabel.textContent = online ? "" : "Ожидание кадра камеры…";
     resolution.textContent = online ? data.width + " × " + data.height : "— × —";
     fps.textContent = online ? data.fps + " FPS" : "— FPS";
-    source.textContent = "Camera " + data.camera_index + (online ? " · " + data.backend : "");
+    const cameraLabel = data.camera_name || ("Camera " + data.camera_index);
+    source.textContent = cameraLabel + " · " + data.camera_index + (online && data.backend ? " · " + data.backend : "");
     snapshot.setAttribute("aria-disabled", online ? "false" : "true");
     const note = online ? (data.notice || "") : "";
     notice.textContent = note;

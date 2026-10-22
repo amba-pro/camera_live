@@ -10,7 +10,9 @@ from urllib.request import urlopen
 import cv2
 import numpy as np
 
-from camera_live import CameraWorker, LiveHandler, backend_choices, frame_notice
+from camera_live import (
+    CameraWorker, LiveHandler, backend_choices, frame_notice, select_camera_index,
+)
 
 
 class FakeCamera:
@@ -20,7 +22,7 @@ class FakeCamera:
 
     def status(self):
         return {
-            "online": self.online, "camera_index": 0, "width": 640,
+            "online": self.online, "camera_index": 0, "camera_name": "Fake", "width": 640,
             "height": 480, "fps": 12.5, "backend": "fake", "frames": 10,
             "last_frame_seconds": 0.1, "error": "" if self.online else "offline",
             "notice": "",
@@ -103,6 +105,24 @@ class CameraLiveHttpTests(unittest.TestCase):
 
     def test_backends(self):
         self.assertEqual(backend_choices("any")[0][0], "any")
+
+
+class CameraSelectionTests(unittest.TestCase):
+    def test_prefers_logitech_over_laptop_camera(self):
+        names = ["USB2.0 HD UVC WebCam", "HD Pro Webcam C920", "Meta Quest 3"]
+        self.assertEqual(select_camera_index(names, None, ""), (1, "HD Pro Webcam C920"))
+
+    def test_explicit_index_wins(self):
+        names = ["USB2.0 HD UVC WebCam", "HD Pro Webcam C920"]
+        self.assertEqual(select_camera_index(names, 0, ""), (0, "USB2.0 HD UVC WebCam"))
+
+    def test_camera_name_query(self):
+        names = ["USB2.0 HD UVC WebCam", "HD Pro Webcam C920"]
+        self.assertEqual(select_camera_index(names, 0, "c920"), (1, "HD Pro Webcam C920"))
+
+    def test_missing_name_raises(self):
+        with self.assertRaises(ValueError):
+            select_camera_index(["USB2.0 HD UVC WebCam"], None, "C920")
 
 
 class FrameNoticeTests(unittest.TestCase):
