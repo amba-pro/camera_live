@@ -30,6 +30,11 @@
   let activeStroke = null;
   let lastFlush = 0;
   let queue = Promise.resolve();
+  let serverClockOffset = 0;
+
+  function serverNow() {
+    return Date.now() / 1000 + serverClockOffset;
+  }
 
   function newClientId() {
     sequence += 1;
@@ -100,8 +105,12 @@
 
   function redraw() {
     ctx.clearRect(0, 0, player.clientWidth, player.clientHeight);
-    const now = Date.now() / 1000;
-    events = events.filter((e) => e.type !== "stroke" || now - e.time < STROKE_TTL);
+    const now = serverNow();
+    events = events.filter((e) =>
+      (e.type === "stroke" && now - e.time < STROKE_TTL) ||
+      (e.type === "reaction" && now - e.time < REACTION_TTL));
+    // Cursor keeps a monotonic receipt position; old IDs need not live forever.
+    if (knownIds.size > 2500) knownIds = new Set(events.map((e) => e.id));
     for (const entry of events) if (entry.type === "stroke") paintStroke(entry);
     for (const entry of optimistic) paintStroke(entry);
     if (activeStroke && activeStroke.points.length) paintStroke(activeStroke);
@@ -115,7 +124,7 @@
 
   function showReaction(event) {
     if (reactions.has(event.id)) return;
-    const age = Math.max(0, Date.now() / 1000 - event.time);
+    const age = Math.max(0, serverNow() - event.time);
     if (age >= REACTION_TTL) return;
     const node = document.createElement("span");
     node.className = "flying-reaction";
@@ -151,6 +160,10 @@
 
   function applyResponse(data) {
     if (!data || !Array.isArray(data.events)) return;
+    if (Number.isFinite(data.server_time)) {
+      // Laptop and phone clocks may differ. Align reaction age with server time.
+      serverClockOffset = data.server_time - Date.now() / 1000;
+    }
     const newSession = typeof data.session === "string" && data.session !== session;
     if (newSession || data.reset) clearVisuals();
     if (newSession) session = data.session;
@@ -167,7 +180,7 @@
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
       // A response can race with a successful local POST; don't rewind cursor.
-      if (data.session === session && !data.reset && data.latest_id < cursor) return;
+      if (data.session === session && data.latest_id < cursor) return;
       applyResponse(data);
       status.textContent = "Реакции и рисунки общие";
       status.classList.remove("sync-error");
