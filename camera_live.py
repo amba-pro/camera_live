@@ -600,6 +600,9 @@ class LiveHandler(BaseHTTPRequestHandler):
         elif path == "/app.js":
             self._respond(200, "text/javascript; charset=utf-8",
                           (WEB / "app.js").read_bytes())
+        elif path == "/overlays.js":
+            self._respond(200, "text/javascript; charset=utf-8",
+                          (WEB / "overlays.js").read_bytes())
         elif path in (
             "/art/raynor.svg", "/art/kerrigan.svg",
             "/art/zeratul.svg", "/art/artanis.svg",
