@@ -116,3 +116,126 @@ setInterval(refreshStatus, 2000);
 setTimeout(() => {
   if (!snapshotMode && stream.naturalWidth === 0) startSnapshotMode();
 }, 2500);
+
+
+// Lightweight, multi-user LAN chat. The camera and iOS JPEG fallback above
+// intentionally remain unchanged.
+const chatForm = document.getElementById("chat-form");
+const chatMessages = document.getElementById("chat-messages");
+const chatEmpty = document.getElementById("chat-empty");
+const chatNickname = document.getElementById("chat-nickname");
+const chatText = document.getElementById("chat-text");
+const chatStatus = document.getElementById("chat-status");
+const chatError = document.getElementById("chat-error");
+const chatCount = document.getElementById("chat-count");
+const chatSend = document.getElementById("chat-send");
+let chatLastId = 0;
+let chatRefreshing = false;
+
+try {
+  chatNickname.value = localStorage.getItem("koprulu-chat-nickname") || "";
+} catch (_) {
+  // Storage can be disabled, e.g. private browsing.
+}
+
+chatText.addEventListener("input", () => {
+  chatCount.textContent = chatText.value.length + " / 300";
+});
+chatText.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    event.preventDefault();
+    chatForm.requestSubmit();
+  }
+});
+
+function renderChatMessage(record) {
+  if (!record || !Number.isSafeInteger(record.id) || typeof record.nickname !== "string" ||
+      typeof record.text !== "string") return;
+  if (record.id <= chatLastId) return;
+  const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop -
+    chatMessages.clientHeight < 90;
+  const item = document.createElement("article");
+  item.className = "chat-message";
+  const head = document.createElement("div");
+  head.className = "chat-message-head";
+  const nick = document.createElement("span");
+  nick.className = "chat-message-name";
+  nick.textContent = record.nickname; // Never use innerHTML with user input.
+  const time = document.createElement("time");
+  time.className = "chat-message-time";
+  const date = new Date(record.timestamp);
+  time.textContent = Number.isNaN(date.getTime()) ? "" :
+    date.toLocaleTimeString("ru-RU", {hour: "2-digit", minute: "2-digit"});
+  const message = document.createElement("p");
+  message.className = "chat-message-body";
+  message.textContent = record.text;
+  head.append(nick, time);
+  item.append(head, message);
+  chatMessages.appendChild(item);
+  chatLastId = record.id;
+  chatEmpty.hidden = true;
+  while (chatMessages.querySelectorAll(".chat-message").length > 200) {
+    chatMessages.querySelector(".chat-message").remove();
+  }
+  if (isAtBottom) chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function refreshChat() {
+  if (chatRefreshing) return;
+  chatRefreshing = true;
+  try {
+    const response = await fetch("/api/chat?after=" + chatLastId, {cache: "no-store"});
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const payload = await response.json();
+    if (!Array.isArray(payload.messages)) throw new Error("Некорректный ответ");
+    if (payload.latest_id < chatLastId) {
+      // Python server restarted; history and IDs start from the beginning.
+      chatLastId = 0;
+      chatMessages.querySelectorAll(".chat-message").forEach((node) => node.remove());
+      chatEmpty.hidden = false;
+      return;
+    }
+    for (const record of payload.messages) renderChatMessage(record);
+    chatStatus.textContent = "Канал активен · " +
+      chatMessages.querySelectorAll(".chat-message").length + " сообщений в истории";
+  } catch (_) {
+    chatStatus.textContent = "Нет связи с чатом · повторное подключение…";
+  } finally {
+    chatRefreshing = false;
+  }
+}
+
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (chatSend.disabled) return;
+  chatError.hidden = true;
+  const nickname = chatNickname.value.trim();
+  const text = chatText.value.trim();
+  if (!nickname || !text) {
+    chatError.textContent = "Заполните позывной и сообщение.";
+    chatError.hidden = false;
+    return;
+  }
+  chatSend.disabled = true;
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({nickname, text})
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Не удалось отправить сообщение");
+    chatText.value = "";
+    chatCount.textContent = "0 / 300";
+    try { localStorage.setItem("koprulu-chat-nickname", nickname); } catch (_) {}
+    await refreshChat();
+    chatText.focus();
+  } catch (error) {
+    chatError.textContent = error.message;
+    chatError.hidden = false;
+  } finally {
+    chatSend.disabled = false;
+  }
+});
+refreshChat();
+setInterval(refreshChat, 1700);
