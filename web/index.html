@@ -12,6 +12,14 @@
 </head>
 <body>
   <div class="starfield" aria-hidden="true"></div>
+  <!-- The characters are decorative background layers; stream and chat remain interactive. -->
+  <div class="character-backdrop" aria-hidden="true">
+    <span class="bg-hero bg-raynor"></span>
+    <span class="bg-beam beam-left"></span>
+    <span class="bg-hero bg-artanis"></span>
+    <span class="bg-beam beam-right"></span>
+    <span class="bg-hero bg-kerrigan"></span>
+  </div>
   <main class="shell">
     <header class="header">
       <div class="brand">
@@ -26,13 +34,29 @@
       <div class="top-right"><span class="signal">● СЕКТОР ОНЛАЙН</span><span class="stream-number">TRANSMISSION // 001</span></div>
     </header>
 
-    <section class="heading" aria-labelledby="stream-title">
+    <section class="broadcast-stage" aria-label="Постер трансляции StarCraft">
+      <div class="stage-art" aria-hidden="true">
+        <span class="stage-portrait stage-raynor"></span>
+        <span class="stage-light stage-light-left"></span>
+        <span class="stage-portrait stage-artanis"></span>
+        <span class="stage-light stage-light-right"></span>
+        <span class="stage-portrait stage-kerrigan"></span>
+      </div>
+      <span class="stage-corner top-left" aria-hidden="true"></span>
+      <span class="stage-corner top-right" aria-hidden="true"></span>
+      <span class="stage-corner bottom-left" aria-hidden="true"></span>
+      <span class="stage-corner bottom-right" aria-hidden="true"></span>
+      <div class="stage-scan" aria-hidden="true">◈ KOPRULU SECTOR / SYSTEM ONLINE ◈</div>
+      <section class="heading" aria-labelledby="stream-title">
       <div>
         <p class="eyebrow"><span class="tiny-square"></span> ПРЯМОЙ ЭФИР · СЕКТОР КОПРУЛУ</p>
         <h1 id="stream-title">STARCRAFT <span>LIVE</span></h1>
         <p class="subtitle">Командный мостик открыт. Камера в эфире, зрители — в чате. За терранов, протоссов и зергов!</p>
       </div>
       <div id="state" class="status offline" aria-live="polite"><span class="dot"></span><span id="state-label">Подключение…</span></div>
+    </section>
+
+      <div class="stage-bottom" aria-hidden="true"><span>COMMAND DECK · 001</span><span>▰ ▰ ▰ ▰ ▰ · TRANSMISSION ACTIVE</span></div>
     </section>
 
     <div class="main-grid">
