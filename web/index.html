@@ -9,6 +9,7 @@
   <title>Koprulu Command · StarCraft Stream</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
+  <script src="/overlays.js" defer></script>
 </head>
 <body>
   <div class="starfield" aria-hidden="true"></div>
@@ -68,6 +69,9 @@
           </div>
           <div class="player">
             <img id="stream" src="/stream.mjpg" alt="Прямая трансляция с USB-камеры">
+            <!-- Canvas is an overlay; pixels are not written into the camera stream. -->
+            <canvas id="draw-layer" class="draw-layer" aria-label="Общий слой рисунков поверх трансляции"></canvas>
+            <div id="reaction-layer" class="reaction-layer" aria-hidden="true"></div>
             <div id="overlay" class="overlay">
               <div class="loader" aria-hidden="true"></div>
               <span id="overlay-label">Ожидание сигнала с камеры…</span>
@@ -80,6 +84,41 @@
             <span class="reticle r-bl" aria-hidden="true"></span>
             <span class="reticle r-br" aria-hidden="true"></span>
           </div>
+          <div class="overlays-toolbar" aria-label="Общие реакции и рисунки">
+            <div class="reaction-tools">
+              <span class="tools-label">РЕАКЦИИ</span>
+              <div class="reaction-buttons" role="group" aria-label="Отправить реакцию всем зрителям">
+                <button type="button" class="reaction-button" data-emoji="🔥" aria-label="Огонь">🔥</button>
+                <button type="button" class="reaction-button" data-emoji="❤️" aria-label="Сердце">❤️</button>
+                <button type="button" class="reaction-button" data-emoji="😂" aria-label="Смех">😂</button>
+                <button type="button" class="reaction-button" data-emoji="👏" aria-label="Аплодисменты">👏</button>
+                <button type="button" class="reaction-button" data-emoji="⚡" aria-label="Молния">⚡</button>
+                <button type="button" class="reaction-button" data-emoji="👾" aria-label="Зерг">👾</button>
+              </div>
+            </div>
+            <div class="draw-tools">
+              <button type="button" id="draw-toggle" class="button draw-toggle" aria-pressed="false">✎ Рисовать</button>
+              <div id="draw-options" class="draw-options" hidden>
+                <label class="tools-label" for="draw-color">ЦВЕТ</label>
+                <select id="draw-color" aria-label="Цвет пера">
+                  <option value="#6be7ff">Голубой</option>
+                  <option value="#ffda70">Жёлтый</option>
+                  <option value="#ff5d8f">Розовый</option>
+                  <option value="#9effa0">Зелёный</option>
+                  <option value="#ffffff">Белый</option>
+                </select>
+                <label class="tools-label" for="draw-width">ПЕРО</label>
+                <select id="draw-width" aria-label="Толщина пера">
+                  <option value="3">Тонкое</option>
+                  <option value="6" selected>Среднее</option>
+                  <option value="10">Толстое</option>
+                </select>
+                <button type="button" id="draw-clear" class="button danger-button" title="Удалить рисунки у всех зрителей">⌫ Очистить всем</button>
+              </div>
+            </div>
+            <span id="overlay-sync-status" class="overlay-sync-status" role="status">Связь с каналом…</span>
+          </div>
+          <p class="overlay-help">Реакции и рисунки видят все зрители этого стрима. Нажми «Рисовать», чтобы рисовать мышью или пальцем. Рисунки исчезают через 2 минуты.</p>
           <div class="toolbar">
             <div class="meta">
               <span class="meta-label">SIGNAL</span>

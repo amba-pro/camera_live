@@ -19,3 +19,7 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: Run HTTP smoke tests (mock camera)
         run: python -m unittest discover -s tests -v
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check web/app.js
+          node --check web/overlays.js

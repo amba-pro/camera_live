@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlsplit
 import cv2
 
 from chat import ChatError, ChatStore
+from overlays import OverlayError, OverlayStore
 
 
 ROOT = Path(__file__).resolve().parent
@@ -571,6 +572,10 @@ class LiveHandler(BaseHTTPRequestHandler):
     def chat(self) -> ChatStore:
         return self.server.chat  # type: ignore[attr-defined]
 
+    @property
+    def overlays(self) -> OverlayStore:
+        return self.server.overlays  # type: ignore[attr-defined]
+
     def _json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self._respond(status, "application/json; charset=utf-8", body)
@@ -595,6 +600,9 @@ class LiveHandler(BaseHTTPRequestHandler):
         elif path == "/app.js":
             self._respond(200, "text/javascript; charset=utf-8",
                           (WEB / "app.js").read_bytes())
+        elif path == "/overlays.js":
+            self._respond(200, "text/javascript; charset=utf-8",
+                          (WEB / "overlays.js").read_bytes())
         elif path in (
             "/art/raynor.svg", "/art/kerrigan.svg",
             "/art/zeratul.svg", "/art/artanis.svg",
@@ -610,6 +618,15 @@ class LiveHandler(BaseHTTPRequestHandler):
                     raise ChatError("Неверный параметр after.")
                 self._json(200, self.chat.history(int(cursors[0])))
             except ChatError as exc:
+                self._json(exc.status, {"error": str(exc)})
+        elif path == "/api/overlays":
+            try:
+                values = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                cursors = values.get("after", ["0"])
+                if len(cursors) != 1 or not cursors[0].isdigit():
+                    raise OverlayError("Некорректный курсор событий.")
+                self._json(200, self.overlays.history(int(cursors[0])))
+            except OverlayError as exc:
                 self._json(exc.status, {"error": str(exc)})
         elif path == "/api/status":
             payload = self.camera.status()
@@ -632,7 +649,8 @@ class LiveHandler(BaseHTTPRequestHandler):
             self._respond(404, "text/plain; charset=utf-8", b"Not found")
 
     def do_POST(self) -> None:
-        if urlsplit(self.path).path != "/api/chat":
+        route = urlsplit(self.path).path
+        if route not in ("/api/chat", "/api/overlays"):
             self._json(404, {"error": "Not found"})
             return
         origin = self.headers.get("Origin")
@@ -658,12 +676,20 @@ class LiveHandler(BaseHTTPRequestHandler):
         except (ValueError, UnicodeDecodeError):
             self._json(400, {"error": "Неверный JSON."})
             return
-        try:
-            record = self.chat.post(payload, self.client_address[0])
-        except ChatError as exc:
-            self._json(exc.status, {"error": str(exc)})
+        if route == "/api/overlays":
+            try:
+                event = self.overlays.post(payload, self.client_address[0])
+            except OverlayError as exc:
+                self._json(exc.status, {"error": str(exc)})
+            else:
+                self._json(201, {"event": event})
         else:
-            self._json(201, {"message": record})
+            try:
+                record = self.chat.post(payload, self.client_address[0])
+            except ChatError as exc:
+                self._json(exc.status, {"error": str(exc)})
+            else:
+                self._json(201, {"message": record})
 
     def _stream(self) -> None:
         self.send_response(200)
@@ -777,6 +803,7 @@ def main() -> None:
     server.daemon_threads = True
     server.camera = camera  # type: ignore[attr-defined]
     server.chat = ChatStore()  # type: ignore[attr-defined]
+    server.overlays = OverlayStore()  # type: ignore[attr-defined]
     camera.start()
     print(f"Camera Live: http://127.0.0.1:{args.port}")
     if args.host not in ("127.0.0.1", "localhost", "::1"):
