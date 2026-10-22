@@ -11,8 +11,8 @@ import cv2
 import numpy as np
 
 from camera_live import (
-    CameraWorker, LiveHandler, backend_choices, frame_notice, is_phone_lan_ip,
-    phone_lan_urls, select_camera_index,
+    CameraWorker, LiveHandler, adapter_is_virtual, backend_choices, frame_notice,
+    is_phone_lan_ip, phone_lan_urls, select_camera_index,
 )
 
 
@@ -133,6 +133,11 @@ class CameraSelectionTests(unittest.TestCase):
         self.assertFalse(is_phone_lan_ip("192.168.56.1"))
         self.assertFalse(is_phone_lan_ip("192.168.137.1"))
 
+    def test_virtual_adapter_names(self):
+        self.assertTrue(adapter_is_virtual("TAP-Windows Adapter V9"))
+        self.assertTrue(adapter_is_virtual("Tailscale Tunnel"))
+        self.assertFalse(adapter_is_virtual("Realtek 8822CE Wireless LAN 802.11ac PCI-E NIC"))
+
     def test_phone_urls_prefer_home_lan(self):
         import unittest.mock
         infos = [
@@ -140,11 +145,23 @@ class CameraSelectionTests(unittest.TestCase):
             (None, None, None, None, ("192.168.50.7", 0)),
             (None, None, None, None, ("192.168.186.166", 0)),
         ]
-        with unittest.mock.patch("camera_live.socket.getaddrinfo", return_value=infos):
+        with unittest.mock.patch("camera_live.socket.getaddrinfo", return_value=infos), \
+                unittest.mock.patch("camera_live.virtual_adapter_ips", return_value=set()):
             self.assertEqual(
                 phone_lan_urls(8000),
                 ["http://192.168.50.7:8000", "http://192.168.186.166:8000"],
             )
+
+    def test_phone_urls_skip_tap_vpn(self):
+        import unittest.mock
+        infos = [
+            (None, None, None, None, ("10.110.100.2", 0)),
+            (None, None, None, None, ("192.168.50.7", 0)),
+            (None, None, None, None, ("192.168.186.166", 0)),
+        ]
+        with unittest.mock.patch("camera_live.socket.getaddrinfo", return_value=infos), \
+                unittest.mock.patch("camera_live.virtual_adapter_ips", return_value={"192.168.50.7", "10.110.100.2"}):
+            self.assertEqual(phone_lan_urls(8000), ["http://192.168.186.166:8000"])
 
 
 class FrameNoticeTests(unittest.TestCase):

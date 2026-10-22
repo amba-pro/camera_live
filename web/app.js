@@ -84,7 +84,8 @@ async function refreshStatus() {
       : (data.error || "Повторное подключение камеры…");
     const urls = Array.isArray(data.lan_urls) ? data.lan_urls : [];
     lan.hidden = urls.length === 0;
-    lan.textContent = urls.length ? "С телефона в той же сети откройте: " + urls.join(" или ") : "";
+    const network = data.lan_network ? (" в Wi-Fi «" + data.lan_network + "»") : " в той же сети";
+    lan.textContent = urls.length ? ("С телефона" + network + " откройте: " + urls.join(" или ")) : "";
     if (!online) sawOffline = true;
     if (online && !lastOnline && sawOffline && !snapshotMode) {
       useMjpegStream();

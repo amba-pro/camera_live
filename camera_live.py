@@ -8,6 +8,7 @@ import json
 import os
 import signal
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -210,6 +211,124 @@ def directshow_device_names() -> list[str]:
     return names
 
 
+VIRTUAL_ADAPTER_MARKERS = (
+    "tap-windows", "tailscale", "virtualbox", "hyper-v", "vethernet", "wsl",
+    "bluetooth", "wireguard", "openvpn", "tunnel", "loopback", "vpn",
+    "nordlynx", "hamachi", "zerotier", "radmin", "isatap", "teredo",
+    "wan miniport", "outline", "pseudo", "virtual",
+)
+
+
+def adapter_is_virtual(description: str) -> bool:
+    text = description.casefold()
+    return any(marker in text for marker in VIRTUAL_ADAPTER_MARKERS)
+
+
+def virtual_adapter_ips() -> set[str]:
+    """IPv4 on VPN, TAP and other non-hardware adapters. A phone cannot open those."""
+    if os.name != "nt":
+        return set()
+    try:
+        return _windows_virtual_adapter_ips()
+    except (OSError, AttributeError):
+        return set()
+
+
+def _windows_virtual_adapter_ips() -> set[str]:
+    class SockAddr(ctypes.Structure):
+        _fields_ = [("family", ctypes.c_ushort), ("data", ctypes.c_ubyte * 14)]
+
+    class SocketAddress(ctypes.Structure):
+        _fields_ = [("lpSockaddr", ctypes.POINTER(SockAddr)), ("length", ctypes.c_int)]
+
+    class Unicast(ctypes.Structure):
+        pass
+
+    Unicast._fields_ = [
+        ("length", ctypes.c_ulong),
+        ("flags", ctypes.c_ulong),
+        ("next", ctypes.POINTER(Unicast)),
+        ("address", SocketAddress),
+    ]
+
+    class Addresses(ctypes.Structure):
+        pass
+
+    Addresses._fields_ = [
+        ("length", ctypes.c_ulong),
+        ("ifindex", ctypes.c_ulong),
+        ("next", ctypes.POINTER(Addresses)),
+        ("adapter_name", ctypes.c_char_p),
+        ("first_unicast", ctypes.POINTER(Unicast)),
+        ("first_anycast", ctypes.c_void_p),
+        ("first_multicast", ctypes.c_void_p),
+        ("first_dns", ctypes.c_void_p),
+        ("dns_suffix", ctypes.c_wchar_p),
+        ("description", ctypes.c_wchar_p),
+        ("friendly", ctypes.c_wchar_p),
+    ]
+
+    iphlpapi = ctypes.WinDLL("iphlpapi")
+    get_adapters = iphlpapi.GetAdaptersAddresses
+    get_adapters.argtypes = [
+        ctypes.c_ulong, ctypes.c_ulong, ctypes.c_void_p,
+        ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong),
+    ]
+    get_adapters.restype = ctypes.c_ulong
+    size = ctypes.c_ulong(16 * 1024)
+    buf = None
+    for _ in range(3):
+        buf = ctypes.create_string_buffer(size.value)
+        result = get_adapters(
+            2, 0x2 | 0x4 | 0x8, None, ctypes.cast(buf, ctypes.POINTER(Addresses)), ctypes.byref(size)
+        )
+        if result == 0:
+            break
+        if result != 111:
+            return set()
+    else:
+        return set()
+    skipped: set[str] = set()
+    current = ctypes.cast(buf, ctypes.POINTER(Addresses))
+    while current:
+        adapter = current.contents
+        label = f"{adapter.description or ''} {adapter.friendly or ''}"
+        if adapter_is_virtual(label):
+            unicast = adapter.first_unicast
+            while unicast:
+                sockaddr = unicast.contents.address.lpSockaddr
+                if sockaddr and sockaddr.contents.family == 2:
+                    raw = bytes(sockaddr.contents.data[2:6])
+                    skipped.add(".".join(str(part) for part in raw))
+                unicast = unicast.contents.next
+        current = adapter.next
+    return skipped
+
+
+def wifi_ssid() -> str:
+    """Name of the connected Wi-Fi, so the phone joins that network and not mobile data."""
+    cached = getattr(wifi_ssid, "_cache", None)
+    now = time.monotonic()
+    if cached and now - cached[0] < 15:
+        return cached[1]
+    ssid = ""
+    if os.name == "nt":
+        try:
+            output = subprocess.check_output(
+                ["netsh", "wlan", "show", "interfaces"],
+                text=True, errors="replace", timeout=2,
+            )
+        except (OSError, subprocess.SubprocessError):
+            output = ""
+        for line in output.splitlines():
+            stripped = line.strip()
+            if stripped.lower().startswith("ssid") and "bssid" not in stripped.lower():
+                ssid = stripped.split(":", 1)[1].strip()
+                break
+    wifi_ssid._cache = (now, ssid)  # type: ignore[attr-defined]
+    return ssid
+
+
 def is_phone_lan_ip(ip: str) -> bool:
     """Home-LAN addresses a phone can open. Skips Tailscale, VirtualBox and the Windows hotspot."""
     try:
@@ -229,6 +348,7 @@ def is_phone_lan_ip(ip: str) -> bool:
 
 def phone_lan_urls(port: int) -> list[str]:
     urls: list[str] = []
+    skip = virtual_adapter_ips()
     try:
         infos = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)
     except OSError:
@@ -236,7 +356,7 @@ def phone_lan_urls(port: int) -> list[str]:
     for info in infos:
         ip = info[4][0]
         url = f"http://{ip}:{port}"
-        if is_phone_lan_ip(ip) and url not in urls:
+        if ip not in skip and is_phone_lan_ip(ip) and url not in urls:
             urls.append(url)
     home = [url for url in urls if "://192.168." in url or "://172." in url]
     return home or urls
@@ -468,7 +588,9 @@ class LiveHandler(BaseHTTPRequestHandler):
         elif path == "/api/status":
             payload = self.camera.status()
             host, port = self.server.server_address[:2]
-            payload["lan_urls"] = [] if host in ("127.0.0.1", "localhost", "::1") else phone_lan_urls(port)
+            on_lan = host not in ("127.0.0.1", "localhost", "::1")
+            payload["lan_urls"] = phone_lan_urls(port) if on_lan else []
+            payload["lan_network"] = wifi_ssid() if on_lan else ""
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self._respond(200, "application/json; charset=utf-8", body)
         elif path == "/snapshot.jpg":
@@ -598,6 +720,9 @@ def main() -> None:
     print(f"Camera Live: http://127.0.0.1:{args.port}")
     if args.host not in ("127.0.0.1", "localhost", "::1"):
         print("ВНИМАНИЕ: сервер без пароля и HTTPS. Только доверенная локальная сеть.")
+        ssid = wifi_ssid()
+        if ssid:
+            print(f"Телефон должен быть в Wi-Fi «{ssid}», не в мобильном интернете.", flush=True)
         for url in phone_lan_urls(args.port):
             print(f"С телефона: {url}", flush=True)
     print("Остановка: Ctrl+C")
